@@ -23,12 +23,11 @@ import org.tensorflow.lite.examples.detection.env.BorderedText;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Utils;
 import org.tensorflow.lite.examples.detection.tflite.Detector;
-import org.tensorflow.lite.examples.detection.tflite.YoloV4Classifier;
+import org.tensorflow.lite.examples.detection.tflite.YoloV5Classifier;
 //import org.tensorflow.lite.examples.detection.tracking.MultiBoxTracker;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.InterruptedByTimeoutException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             }).start();
 
         });
-        this.sourceBitmap = Utils.getBitmapFromAsset(MainActivity.this, "kite.jpg");
+        this.sourceBitmap = Utils.getBitmapFromAsset(MainActivity.this, "001921029_620x393_c.jpg");
 
         this.cropBitmap = Utils.processBitmap(sourceBitmap, TF_OD_API_INPUT_SIZE);
 
@@ -77,13 +76,13 @@ public class MainActivity extends AppCompatActivity {
 
     public static int SELECT_IMAGE_CODE = 1;
 
-    public static final int TF_OD_API_INPUT_SIZE = 416;
+    public static final int TF_OD_API_INPUT_SIZE = 640;
 
     private static final boolean TF_OD_API_IS_QUANTIZED = false;
 
-    private static final String TF_OD_API_MODEL_FILE = "yolov4-416-fp32.tflite";
+    private static final String TF_OD_API_MODEL_FILE = "yolov5s-fp16.tflite";
 
-    private static final String TF_OD_API_LABELS_FILE = "file:///android_asset/coco.txt";
+    private static final String TF_OD_API_LABELS_FILE = "file:///android_asset/classes.txt";
 
     // Minimum detection confidence to track a detection.
     private static final boolean MAINTAIN_ASPECT = false;
@@ -124,11 +123,12 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             detector =
-                    YoloV4Classifier.create(
+                    YoloV5Classifier.create(
                             getAssets(),
                             TF_OD_API_MODEL_FILE,
                             TF_OD_API_LABELS_FILE,
-                            TF_OD_API_IS_QUANTIZED);
+                            TF_OD_API_IS_QUANTIZED,
+                            TF_OD_API_INPUT_SIZE);
         } catch (final IOException e) {
             e.printStackTrace();
             Toast toast =
