@@ -26,16 +26,6 @@ import java.util.List;
 public interface Detector {
     List<Recognition> recognizeImage(Bitmap bitmap);
 
-    void enableStatLogging(final boolean debug);
-
-    String getStatString();
-
-    void close();
-
-    void setNumThreads(int num_threads);
-
-    void setUseNNAPI(boolean isChecked);
-
     abstract float getObjThresh();
 
     /** An immutable result returned by a Classifier describing what was recognized. */
@@ -63,8 +53,7 @@ public interface Detector {
 
         private int detectedClass;
 
-        public Recognition(
-                final String id, final String title, final Float confidence, final RectF location) {
+        public Recognition(final String id, final String title, final Float confidence, final RectF location) {
             this.id = id;
             this.title = title;
             this.confidence = confidence;

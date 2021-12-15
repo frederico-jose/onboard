@@ -18,16 +18,12 @@ package com.example.tfmobile.tflite;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
-import android.os.Build;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 import com.example.tfmobile.MainActivity;
-//import org.tensorflow.lite.examples.detection.env.Logger;
 import com.example.tfmobile.env.Utils;
-import org.tensorflow.lite.gpu.GpuDelegate;
-import org.tensorflow.lite.nnapi.NnApiDelegate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,7 +50,6 @@ import java.util.Vector;
  * - https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/running_on_mobile_tensorflowlite.md#running-our-model-on-android
  */
 public class YoloV5Classifier implements Detector {
-
     /**
      * Initializes a native TensorFlow session for classifying images.
      *
@@ -63,15 +58,50 @@ public class YoloV5Classifier implements Detector {
      * @param labelFilename The filepath of label file for classes.
      * @param isQuantized   Boolean representing model is quantized or not
      */
+
+    // Float model
+    private final float IMAGE_MEAN = 0;
+
+    private final float IMAGE_STD = 255.0f;
+
+    //config yolo
+    private int INPUT_SIZE = -1;
+
+    private int output_box;
+
+    // Number of threads in the java app
+    private static final int NUM_THREADS = 1;
+
+    private boolean isModelQuantized;
+
+    /** The loaded TensorFlow Lite model. */
+    private MappedByteBuffer tfliteModel;
+
+    // Config values.
+
+    // Pre-allocated buffers.
+    private Vector<String> labels = new Vector<String>();
+    private int[] intValues;
+
+    private ByteBuffer imgData;
+    private ByteBuffer outData;
+
+    private Interpreter tfLite;
+    private float inp_scale;
+    private int inp_zero_point;
+    private float oup_scale;
+    private int oup_zero_point;
+    private int numClass;
+
+    private YoloV5Classifier() {
+    }
+
     public static YoloV5Classifier create(
             final AssetManager assetManager,
             final String modelFilename,
             final String labelFilename,
             final boolean isQuantized,
-            final int inputSize
-            /*final int[] output_width,
-            final int[][] masks,
-            final int[] anchors*/)
+            final int inputSize)
             throws IOException {
         final YoloV5Classifier d = new YoloV5Classifier();
 
@@ -80,7 +110,6 @@ public class YoloV5Classifier implements Detector {
         BufferedReader br = new BufferedReader(new InputStreamReader(labelsInput));
         String line;
         while ((line = br.readLine()) != null) {
-            //LOGGER.w(line);
             d.labels.add(line);
         }
         br.close();
@@ -88,26 +117,6 @@ public class YoloV5Classifier implements Detector {
         try {
             Interpreter.Options options = (new Interpreter.Options());
             options.setNumThreads(NUM_THREADS);
-            if (isNNAPI) {
-                d.nnapiDelegate = null;
-                // Initialize interpreter with NNAPI delegate for Android Pie or above
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    d.nnapiDelegate = new NnApiDelegate();
-                    options.addDelegate(d.nnapiDelegate);
-                    options.setNumThreads(NUM_THREADS);
-//                    options.setUseNNAPI(false);
-//                    options.setAllowFp16PrecisionForFp32(true);
-//                    options.setAllowBufferHandleOutput(true);
-                    options.setUseNNAPI(true);
-                }
-            }
-            if (isGPU) {
-                GpuDelegate.Options gpu_options = new GpuDelegate.Options();
-                gpu_options.setPrecisionLossAllowed(true); // It seems that the default is true
-                gpu_options.setInferencePreference(GpuDelegate.Options.INFERENCE_PREFERENCE_SUSTAINED_SPEED);
-                d.gpuDelegate = new GpuDelegate(gpu_options);
-                options.addDelegate(d.gpuDelegate);
-            }
             d.tfliteModel = Utils.loadModelFile(assetManager, modelFilename);
             d.tfLite = new Interpreter(d.tfliteModel, options);
         } catch (Exception e) {
@@ -128,9 +137,7 @@ public class YoloV5Classifier implements Detector {
         d.intValues = new int[d.INPUT_SIZE * d.INPUT_SIZE];
 
         d.output_box = (int) ((Math.pow((inputSize / 32), 2) + Math.pow((inputSize / 16), 2) + Math.pow((inputSize / 8), 2)) * 3);
-//        d.OUTPUT_WIDTH = output_width;
-//        d.MASKS = masks;
-//        d.ANCHORS = anchors;
+
         if (d.isModelQuantized){
             Tensor inpten = d.tfLite.getInputTensor(0);
             d.inp_scale = inpten.quantizationParams().getScale();
@@ -141,7 +148,7 @@ public class YoloV5Classifier implements Detector {
         }
 
         int[] shape = d.tfLite.getOutputTensor(0).shape();
-        int numClass = shape[shape.length - 1] - 5;
+        int numClass = shape[shape.length - 1] - 5; // need space for xpos, ypos, h, w
         d.numClass = numClass;
         d.outData = ByteBuffer.allocateDirect(d.output_box * (numClass + 5) * numBytesPerChannel);
         d.outData.order(ByteOrder.nativeOrder());
@@ -151,122 +158,10 @@ public class YoloV5Classifier implements Detector {
     public int getInputSize() {
         return INPUT_SIZE;
     }
-    @Override
-    public void enableStatLogging(final boolean logStats) {
-    }
-
-    @Override
-    public String getStatString() {
-        return "";
-    }
-
-    @Override
-    public void close() {
-        tfLite.close();
-        tfLite = null;
-        if (gpuDelegate != null) {
-            gpuDelegate.close();
-            gpuDelegate = null;
-        }
-        if (nnapiDelegate != null) {
-            nnapiDelegate.close();
-            nnapiDelegate = null;
-        }
-        tfliteModel = null;
-    }
-
-    public void setNumThreads(int num_threads) {
-        if (tfLite != null) tfLite.setNumThreads(num_threads);
-    }
-
-    @Override
-    public void setUseNNAPI(boolean isChecked) {
-//        if (tfLite != null) tfLite.setUseNNAPI(isChecked);
-    }
-
-    private void recreateInterpreter() {
-        if (tfLite != null) {
-            tfLite.close();
-            tfLite = new Interpreter(tfliteModel, tfliteOptions);
-        }
-    }
-
-    public void useGpu() {
-        if (gpuDelegate == null) {
-            gpuDelegate = new GpuDelegate();
-            tfliteOptions.addDelegate(gpuDelegate);
-            recreateInterpreter();
-        }
-    }
-
-    public void useCPU() {
-        recreateInterpreter();
-    }
-
-    public void useNNAPI() {
-        nnapiDelegate = new NnApiDelegate();
-        tfliteOptions.addDelegate(nnapiDelegate);
-        recreateInterpreter();
-    }
 
     @Override
     public float getObjThresh() {
         return MainActivity.MINIMUM_CONFIDENCE_TF_OD_API;
-    }
-
-    //private static final Logger LOGGER = new Logger();
-
-    // Float model
-    private final float IMAGE_MEAN = 0;
-
-    private final float IMAGE_STD = 255.0f;
-
-    //config yolo
-    private int INPUT_SIZE = -1;
-
-//    private int[] OUTPUT_WIDTH;
-//    private int[][] MASKS;
-//    private int[] ANCHORS;
-    private  int output_box;
-
-    private static final float[] XYSCALE = new float[]{1.2f, 1.1f, 1.05f};
-
-    private static final int NUM_BOXES_PER_BLOCK = 3;
-
-    // Number of threads in the java app
-    private static final int NUM_THREADS = 1;
-    private static boolean isNNAPI = false;
-    private static boolean isGPU = false;
-
-    private boolean isModelQuantized;
-
-    /** holds a gpu delegate */
-    GpuDelegate gpuDelegate = null;
-    /** holds an nnapi delegate */
-    NnApiDelegate nnapiDelegate = null;
-
-    /** The loaded TensorFlow Lite model. */
-    private MappedByteBuffer tfliteModel;
-
-    /** Options for configuring the Interpreter. */
-    private final Interpreter.Options tfliteOptions = new Interpreter.Options();
-
-    // Config values.
-
-    // Pre-allocated buffers.
-    private Vector<String> labels = new Vector<String>();
-    private int[] intValues;
-
-    private ByteBuffer imgData;
-    private ByteBuffer outData;
-
-    private Interpreter tfLite;
-    private float inp_scale;
-    private int inp_zero_point;
-    private float oup_scale;
-    private int oup_zero_point;
-    private int numClass;
-    private YoloV5Classifier() {
     }
 
     //non maximum suppression
@@ -345,20 +240,13 @@ public class YoloV5Classifier implements Detector {
         return right - left;
     }
 
-    protected static final int BATCH_SIZE = 1;
-    protected static final int PIXEL_SIZE = 3;
-
     /**
      * Writes Image data into a {@code ByteBuffer}.
      */
     protected ByteBuffer convertBitmapToByteBuffer(Bitmap bitmap) {
-//        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(4 * BATCH_SIZE * INPUT_SIZE * INPUT_SIZE * PIXEL_SIZE);
-//        byteBuffer.order(ByteOrder.nativeOrder());
-//        int[] intValues = new int[INPUT_SIZE * INPUT_SIZE];
         bitmap.getPixels(intValues, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
-        int pixel = 0;
 
-        imgData.rewind();
+        imgData.rewind(); //ready for read/put
         for (int i = 0; i < INPUT_SIZE; ++i) {
             for (int j = 0; j < INPUT_SIZE; ++j) {
                 int pixelValue = intValues[i * INPUT_SIZE + j];
@@ -382,8 +270,7 @@ public class YoloV5Classifier implements Detector {
 
         Map<Integer, Object> outputMap = new HashMap<>();
 
-//        float[][][] outbuf = new float[1][output_box][labels.size() + 5];
-        outData.rewind();
+        outData.rewind(); //ready for read/write
         outputMap.put(0, outData);
         Log.d("YoloV5Classifier", "mObjThresh: " + getObjThresh());
 
@@ -411,6 +298,7 @@ public class YoloV5Classifier implements Detector {
                 out[0][i][j] *= getInputSize();
             }
         }
+
         for (int i = 0; i < output_box; ++i){
             final int offset = 0;
             final float confidence = out[0][i][4];
@@ -452,59 +340,6 @@ public class YoloV5Classifier implements Detector {
 
         Log.d("YoloV5Classifier", "detect end");
         final ArrayList<Recognition> recognitions = nms(detections);
-//        final ArrayList<Recognition> recognitions = detections;
         return recognitions;
-    }
-
-    public boolean checkInvalidateBox(float x, float y, float width, float height, float oriW, float oriH, int intputSize) {
-        // (1) (x, y, w, h) --> (xmin, ymin, xmax, ymax)
-        float halfHeight = height / 2.0f;
-        float halfWidth = width / 2.0f;
-
-        float[] pred_coor = new float[]{x - halfWidth, y - halfHeight, x + halfWidth, y + halfHeight};
-
-        // (2) (xmin, ymin, xmax, ymax) -> (xmin_org, ymin_org, xmax_org, ymax_org)
-        float resize_ratioW = 1.0f * intputSize / oriW;
-        float resize_ratioH = 1.0f * intputSize / oriH;
-
-        float resize_ratio = resize_ratioW > resize_ratioH ? resize_ratioH : resize_ratioW; //min
-
-        float dw = (intputSize - resize_ratio * oriW) / 2;
-        float dh = (intputSize - resize_ratio * oriH) / 2;
-
-        pred_coor[0] = 1.0f * (pred_coor[0] - dw) / resize_ratio;
-        pred_coor[2] = 1.0f * (pred_coor[2] - dw) / resize_ratio;
-
-        pred_coor[1] = 1.0f * (pred_coor[1] - dh) / resize_ratio;
-        pred_coor[3] = 1.0f * (pred_coor[3] - dh) / resize_ratio;
-
-        // (3) clip some boxes those are out of range
-        pred_coor[0] = pred_coor[0] > 0 ? pred_coor[0] : 0;
-        pred_coor[1] = pred_coor[1] > 0 ? pred_coor[1] : 0;
-
-        pred_coor[2] = pred_coor[2] < (oriW - 1) ? pred_coor[2] : (oriW - 1);
-        pred_coor[3] = pred_coor[3] < (oriH - 1) ? pred_coor[3] : (oriH - 1);
-
-        if ((pred_coor[0] > pred_coor[2]) || (pred_coor[1] > pred_coor[3])) {
-            pred_coor[0] = 0;
-            pred_coor[1] = 0;
-            pred_coor[2] = 0;
-            pred_coor[3] = 0;
-        }
-
-        // (4) discard some invalid boxes
-        float temp1 = pred_coor[2] - pred_coor[0];
-        float temp2 = pred_coor[3] - pred_coor[1];
-        float temp = temp1 * temp2;
-        if (temp < 0) {
-            Log.e("checkInvalidateBox", "temp < 0");
-            return false;
-        }
-        if (Math.sqrt(temp) > Float.MAX_VALUE) {
-            Log.e("checkInvalidateBox", "temp max");
-            return false;
-        }
-
-        return true;
     }
 }

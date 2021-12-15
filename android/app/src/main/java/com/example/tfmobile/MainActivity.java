@@ -16,19 +16,15 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-//import org.tensorflow.lite.examples.detection.customview.OverlayView;
 import com.example.tfmobile.env.Utils;
 import com.example.tfmobile.env.BorderedText;
 import com.example.tfmobile.env.ImageUtils;
 import com.example.tfmobile.tflite.Detector;
 import com.example.tfmobile.tflite.YoloV5Classifier;
-//import org.tensorflow.lite.examples.detection.tracking.MultiBoxTracker;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -114,13 +110,6 @@ public class MainActivity extends AppCompatActivity {
         cropToFrameTransform = new Matrix();
         frameToCropTransform.invert(cropToFrameTransform);
 
-        /*tracker = new MultiBoxTracker(this);
-        trackingOverlay = findViewById(R.id.tracking_overlay);
-        trackingOverlay.addCallback(
-                canvas -> tracker.draw(canvas));*/
-
-        //tracker.setFrameConfiguration(TF_OD_API_INPUT_SIZE, TF_OD_API_INPUT_SIZE, sensorOrientation);
-
         try {
             detector =
                     YoloV5Classifier.create(
@@ -131,10 +120,6 @@ public class MainActivity extends AppCompatActivity {
                             TF_OD_API_INPUT_SIZE);
         } catch (final IOException e) {
             e.printStackTrace();
-            Toast toast =
-                    Toast.makeText(
-                            getApplicationContext(), "Classifier could not be initialized", Toast.LENGTH_SHORT);
-            toast.show();
             finish();
         }
     }
@@ -146,32 +131,18 @@ public class MainActivity extends AppCompatActivity {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(2.0f);
 
-        final Paint paintText = new Paint();
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(1.0f);
-
-        final List<Detector.Recognition> mappedRecognitions =
-                new LinkedList<Detector.Recognition>();
-
         for (final Detector.Recognition result : results) {
             final RectF location = result.getLocation();
             if (location != null && result.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API) {
                 canvas.drawRect(location, paint);
                 BorderedText b = new BorderedText(15);
-                b.drawText(canvas, location.left, location.top, result.getTitle());
-//                canvas.drawText(result.getTitle(), location.left, location.top, paint);
-//                cropToFrameTransform.mapRect(location);
-//
-//                result.setLocation(location);
-//                mappedRecognitions.add(result);
+                double roundOff = Math.round(result.getConfidence() * 100.0) / 100.0;
+                b.drawText(canvas, location.left, location.top, result.getTitle() + " " + roundOff);
             }
         }
-//        tracker.trackResults(mappedRecognitions, new Random().nextInt());
-//        trackingOverlay.postInvalidate();
         imageView.setImageBitmap(bitmap);
     }
-
+    
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
