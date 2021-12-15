@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package org.tensorflow.lite.examples.detection.tflite;
+package com.example.tfmobile.tflite;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -23,9 +23,9 @@ import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
-import org.tensorflow.lite.examples.detection.MainActivity;
+import com.example.tfmobile.MainActivity;
 //import org.tensorflow.lite.examples.detection.env.Logger;
-import org.tensorflow.lite.examples.detection.env.Utils;
+import com.example.tfmobile.env.Utils;
 import org.tensorflow.lite.gpu.GpuDelegate;
 import org.tensorflow.lite.nnapi.NnApiDelegate;
 

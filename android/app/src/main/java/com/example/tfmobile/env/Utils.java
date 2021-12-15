@@ -1,4 +1,4 @@
-package org.tensorflow.lite.examples.detection.env;
+package com.example.tfmobile.env;
 
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;

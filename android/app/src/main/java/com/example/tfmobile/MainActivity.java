@@ -1,4 +1,4 @@
-package org.tensorflow.lite.examples.detection;
+package com.example.tfmobile;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,11 +19,11 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 //import org.tensorflow.lite.examples.detection.customview.OverlayView;
-import org.tensorflow.lite.examples.detection.env.BorderedText;
-import org.tensorflow.lite.examples.detection.env.ImageUtils;
-import org.tensorflow.lite.examples.detection.env.Utils;
-import org.tensorflow.lite.examples.detection.tflite.Detector;
-import org.tensorflow.lite.examples.detection.tflite.YoloV5Classifier;
+import com.example.tfmobile.env.Utils;
+import com.example.tfmobile.env.BorderedText;
+import com.example.tfmobile.env.ImageUtils;
+import com.example.tfmobile.tflite.Detector;
+import com.example.tfmobile.tflite.YoloV5Classifier;
 //import org.tensorflow.lite.examples.detection.tracking.MultiBoxTracker;
 
 import java.io.IOException;

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.tensorflow.lite.examples.detection">
+    package="com.example.tfmobile">
 
     <uses-sdk />
 
