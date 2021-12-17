@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         imageView = findViewById(R.id.imageView);
 
         chooseImageButton.setOnClickListener(v -> {
+            // Choose image from phone data
             Intent intent = new Intent();
             intent.setType("image/*");
             intent.setAction(Intent.ACTION_GET_CONTENT);
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
         detectButton.setOnClickListener(v -> {
             Handler handler = new Handler();
-
+            // Use yolo model to detect objects
             new Thread(() -> {
                 final List<Detector.Recognition> results = detector.recognizeImage(cropBitmap);
                 handler.post(new Runnable() {
@@ -62,9 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
         });
         this.sourceBitmap = Utils.getBitmapFromAsset(MainActivity.this, "001921029_620x393_c.jpg");
-
         this.cropBitmap = Utils.processBitmap(sourceBitmap, TF_OD_API_INPUT_SIZE);
-
         this.imageView.setImageBitmap(cropBitmap);
 
         initBox();
@@ -149,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             if (requestCode == 1) {
+                // Get image and display it on screen
                 Uri uri = data.getData();
                 final InputStream imageStream = getContentResolver().openInputStream(uri);
                 final Bitmap sourceBitmap = BitmapFactory.decodeStream(imageStream);

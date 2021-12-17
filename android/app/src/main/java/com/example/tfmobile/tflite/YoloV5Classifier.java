@@ -40,15 +40,6 @@ import java.util.PriorityQueue;
 import java.util.Vector;
 
 
-/**
- * Wrapper for frozen detection models trained using the Tensorflow Object Detection API:
- * - https://github.com/tensorflow/models/tree/master/research/object_detection
- * where you can find the training code.
- * <p>
- * To use pretrained models in the API or convert to TF Lite models, please see docs for details:
- * - https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
- * - https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/running_on_mobile_tensorflowlite.md#running-our-model-on-android
- */
 public class YoloV5Classifier implements Detector {
     /**
      * Initializes a native TensorFlow session for classifying images.
@@ -276,8 +267,8 @@ public class YoloV5Classifier implements Detector {
 
         Object[] inputArray = {imgData};
         tfLite.runForMultipleInputsOutputs(inputArray, outputMap);
-
         ByteBuffer byteBuffer = (ByteBuffer) outputMap.get(0);
+
         byteBuffer.rewind();
 
         ArrayList<Recognition> detections = new ArrayList<Recognition>();
